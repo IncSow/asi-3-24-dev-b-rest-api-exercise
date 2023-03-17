@@ -1,0 +1,8 @@
+const up = async (knex) => {}
+
+const down = async (knex) => {}
+
+module.exports = {
+  up,
+  down,
+}

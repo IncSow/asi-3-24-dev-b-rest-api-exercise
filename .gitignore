@@ -1,0 +1,6 @@
+# dependencies
+/node_modules
+.env
+.idea
+# local env files
+.env*.local

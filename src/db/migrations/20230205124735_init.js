@@ -45,13 +45,21 @@ export const up = async (knex) => {
     table.text("label").notNullable()
     table.text("default_value")
   })
+
+  await knex.schema.createTable("form_fields", (table) => {
+    table.increments("id")
+    table.integer("order")
+    table.integer("form_id").references("id").inTable("forms")
+    table.integer("field_id").references("id").inTable("fields")
+  })
 }
 
 export const down = async (knex) => {
-  await knex.schema.dropTable("roles")
-  await knex.schema.dropTable("users")
-  await knex.schema.dropTable("pages")
-  await knex.schema.dropTable("navigation_menus")
+  await knex.schema.dropTable("form_fields")
   await knex.schema.dropTable("forms")
   await knex.schema.dropTable("fields")
+  await knex.schema.dropTable("navigation_menus")
+  await knex.schema.dropTable("pages")
+  await knex.schema.dropTable("users")
+  await knex.schema.dropTable("roles")
 }

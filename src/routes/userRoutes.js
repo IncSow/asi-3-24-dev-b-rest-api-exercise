@@ -3,105 +3,115 @@ import UserModel from "../db/models/UserModel.js"
 import auth from "../middleware/auth.js"
 import bcrypt from "bcryptjs"
 import {
-  idValidator,
   nameValidator,
   emailValidator,
   passwordValidator,
-  phoneNumberValidator,
 } from "../validators.js"
 
 const userRoutes = ({ app, db }) => {
-  app.get("/users", auth, async (req, res) => {
+  app.get("/users", async (req, res) => {
     const record = UserModel.query().select()
 
     res.send({ result: record })
   })
 
-  app.get(
-    "/users/:userId",
-    auth,
-    validate({ req: { userId: idValidator.required() } }),
-    async (req, res) => {
-      const { id } = req.params.userId
-      const user = UserModel.query().findOne({ id })
+  app.get("/users/:userId", async (req, res) => {
+    const { userId } = req.params
+    const user = await UserModel.query().findById(userId)
 
-      if (!user) {
-        res.status(404).send({ error: "Not Found" })
+    if (!user) {
+      res.status(404).send({ error: "Not Found" })
 
-        return
-      }
-
-      res.send({ user })
+      return
     }
-  )
 
-  app.patch(
-    "/users/:userId",
+    res.send({ user })
+  })
+
+  app.post(
+    "/users",
     validate({
       body: {
-        firstName: nameValidator,
-        lastName: nameValidator,
-        email: emailValidator,
-        password: passwordValidator,
-        phoneNumber: phoneNumberValidator,
-      },
-      req: {
-        userId: idValidator.required(),
+        last_name: nameValidator.required(),
+        email: emailValidator.required(),
+        first_name: nameValidator.required(),
+        password: passwordValidator.required(),
       },
     }),
     async (req, res) => {
-      const {
-        params: { userId },
-        body: { firstName, lastName, email, password, phoneNumber },
-      } = req
-      const salt = 10
-      const passwordHash = bcrypt.hashSync(password, salt)
-      const [user] = await db("users").where({
+      const { email, password, first_name, last_name } = req.body
+      const user = await UserModel.query().findOne({ email })
+
+      if (user) {
+        res.send({ result: "OK" })
+
+        return
+      }
+
+      const [passwordHash, passwordSalt] = await hashPassword(password)
+
+      const new_user = await UserModel.query().insertAndFetch({
+        first_name: first_name,
+        last_name: last_name,
+        email: email,
+        password_hash: passwordHash,
+        password_salt: passwordSalt,
+        role_id: 1,
+      })
+
+      res.send({ result: new_user })
+    }
+  )
+
+  app.patch("/users/:userId", async (req, res) => {
+    const {
+      params: { userId },
+      body: { first_name, last_name, email, password },
+    } = req
+    const salt = 10
+
+    const passwordHash = password ? bcrypt.hashSync(password, salt) : null
+
+    const [user] = await db("users").where({
+      id: userId,
+    })
+
+    if (!user) {
+      res.status(404).send({ error: "Not Found" })
+
+      return
+    }
+
+    await db("users")
+      .update({
+        ...(first_name ? { first_name } : {}),
+        ...(last_name ? { last_name } : {}),
+        ...(email ? { email } : {}),
+        ...(passwordHash ? { passwordHash } : {}),
+      })
+      .where({
         id: userId,
       })
+    res.send({
+      result: user,
+    })
+  })
 
-      if (!user) {
-        res.status(404).send({ error: "Not Found" })
+  app.delete("/users/:userId", async (req, res) => {
+    const { userId } = req.params
+    const [user] = await db("users").where({ id: userId })
 
-        return
-      }
+    if (!user) {
+      res.status(404).send({ error: "Not Found" })
 
-      await db("users")
-        .update({
-          ...(firstName ? { firstName } : {}),
-          ...(lastName ? { lastName } : {}),
-          ...(email ? { email } : {}),
-          ...(passwordHash ? { passwordHash } : {}),
-          ...(phoneNumber ? { phoneNumber } : {}),
-        })
-        .where({
-          id: userId,
-        })
-      res.send({
-        result: user,
-      })
+      return
     }
-  )
 
-  app.delete(
-    "/users/:userId",
-    validate({ req: { userId: idValidator.required() } }),
-    async (req, res) => {
-      const { userId } = req.params
-      const [user] = await db("users").where({ id: userId })
-
-      if (!user) {
-        res.status(404).send({ error: "Not Found" })
-
-        return
-      }
-
-      await db("users").delete().where({ id: userId })
-      res.send({
-        result: user,
-      })
-    }
-  )
+    await db("users").delete().where({ id: userId })
+    res.send({
+      result: user,
+    })
+  })
 }
 
 export default userRoutes

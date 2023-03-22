@@ -13,17 +13,26 @@ class UserModel extends BaseModel {
         modelClass: RoleModel,
         join: {
           from: "users.role_id",
-          to: "roles.id"
-        }
+          to: "roles.id",
+        },
       },
       posts: {
         relation: BaseModel.HasManyRelation,
         modelClass: PageModel,
         join: {
           from: "users.id",
-          to: "pages.user_id"
-        }
-      }
+          to: "pages.user_id",
+        },
+      },
+      published_posts: {
+        relation: BaseModel.HasManyRelation,
+        modelclass: PageModel,
+        join: {
+          from: "users.id",
+          to: "pages.user_id",
+          modify: (query) => query.where("pages.status", true),
+        },
+      },
     }
   }
 

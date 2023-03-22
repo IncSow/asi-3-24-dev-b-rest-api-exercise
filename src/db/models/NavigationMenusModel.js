@@ -1,8 +1,8 @@
 import BaseModel from "./BaseModel.js"
 import UserModel from "./UserModel.js"
 
-class PageModel extends BaseModel {
-  static tableName = "pages"
+class NavigationMenuModel extends BaseModel {
+  static tableName = "navigation_menus"
 
   static relationMappings() {
     return {
@@ -18,4 +18,4 @@ class PageModel extends BaseModel {
   }
 }
 
-export default PageModel
+export default NavigationMenuModel

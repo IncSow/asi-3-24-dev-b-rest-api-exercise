@@ -1,4 +1,5 @@
 import PageModel from "../db/models/PageModel.js"
+import { notFound } from "../response.js"
 
 const pageRoutes = ({ app, db }) => {
   app.get("/pages", async (req, res) => {
@@ -11,10 +12,10 @@ const pageRoutes = ({ app, db }) => {
   app.get("/pages/:url_slug", async (req, res) => {
     const { url_slug } = req.params
 
-    const page = await PageModel.query().findById(pageId)
+    const page = await PageModel.query().findById(url_slug)
 
     if (!page) {
-      res.status(404).send({ error: "Not pages where found with that id" })
+      res.status(404).send({ error: "Not Found" })
 
       return
     }
@@ -23,7 +24,7 @@ const pageRoutes = ({ app, db }) => {
   })
 
   app.post("/pages", async (req, res) => {
-    const { title, email, content } = req.body
+    const { title, content } = req.body
     const url_slug = title.replace(/ /g, "-")
 
     const new_page = await PageModel.query().insertAndFetch({
@@ -44,10 +45,8 @@ const pageRoutes = ({ app, db }) => {
     } = req
     const page = await PageModel.query().findOne({ url_slug: url_slug })
 
-    console.log(page.edited_by)
-
     if (!page) {
-      res.status(404).send({ error: "Not Found" })
+      notFound(res)
 
       return
     }
@@ -79,7 +78,7 @@ const pageRoutes = ({ app, db }) => {
     const page = await PageModel.query().findOne({ url_slug: url_slug })
 
     if (!page) {
-      res.status(404).send({ error: "Not Found" })
+      notFound(res)
 
       return
     }

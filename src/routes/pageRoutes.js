@@ -20,7 +20,7 @@ const pageRoutes = ({ app }) => {
     let query = PageModel.query()
 
     if (!loggedUser) {
-      query = PageModel.query().where({ status: true })
+      query.where({ status: true })
     }
 
     if (orderField) {

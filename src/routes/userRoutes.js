@@ -14,8 +14,18 @@ import getCount from "../middleware/getCount.js"
 
 const userRoutes = ({ app, db }) => {
   app.get("/users", auth, async (req, res) => {
-    const { limit, page } = req.query
+    const { limit, page, orderField, order, filterField, filter } = req.query
+
     const query = UserModel.query()
+
+    if (orderField) {
+      query.orderBy(orderField, order)
+    }
+
+    if (filterField) {
+      query.where(`${filterField}`, "like", `%${filter}%`)
+    }
+
     const record = await query.modify("paginate", limit, page)
     const count = await getCount(query)
 

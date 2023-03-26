@@ -17,11 +17,15 @@ const getMissingPagesFromList = async (pageList) => {
 
 const navMenusRoutes = ({ app }) => {
   app.get("/navs", async (req, res) => {
-    const { limit, page, orderField, order } = req.query
+    const { limit, page, orderField, order, nameFilter } = req.query
     const query = NavigationMenuModel.query().modify("paginate", limit, page)
 
     if (orderField) {
       query.orderBy(orderField, order)
+    }
+
+    if (nameFilter) {
+      query.where("name", "like", `%${nameFilter}%`)
     }
 
     const count = await getCount(query)

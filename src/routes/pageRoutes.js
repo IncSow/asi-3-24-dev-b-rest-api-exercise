@@ -13,15 +13,22 @@ import { stringValidator } from "../validators.js"
 
 const pageRoutes = ({ app }) => {
   app.get("/pages", softAuth, async (req, res) => {
-    const { limit, page } = req.query
+    const { limit, page, orderField, order, filterField, filter } = req.query
+
     const loggedUser = await currentUser(req)
 
-    let query
+    let query = PageModel.query()
 
-    if (loggedUser) {
-      query = PageModel.query()
-    } else {
+    if (!loggedUser) {
       query = PageModel.query().where({ status: true })
+    }
+
+    if (orderField) {
+      query.orderBy(orderField, order)
+    }
+
+    if (filterField) {
+      query.where(`${filterField}`, "like", `%${filter}%`)
     }
 
     const record = await query.modify("paginate", limit, page)

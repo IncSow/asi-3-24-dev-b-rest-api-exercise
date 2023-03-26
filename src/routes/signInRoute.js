@@ -17,7 +17,6 @@ const signInRoute = ({ app }) => {
       const { email, password } = req.body
       const user = await UserModel.query().findOne({ email })
 
-
       if (!user || !(await user.checkPassword(password))) {
         res.status(401).send({ error: "Invalid credentials" })
 

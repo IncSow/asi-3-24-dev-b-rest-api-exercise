@@ -69,8 +69,8 @@ function onError(error) {
       process.exit(1)
 
       break
-      
-      case "EADDRINUSE":
+
+    case "EADDRINUSE":
       console.error(bind + " is already in use")
       process.exit(1)
 

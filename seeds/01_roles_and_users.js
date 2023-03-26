@@ -18,9 +18,6 @@ export const seed = async (knex) => {
           permissions: {},
         },
         {
-          const jwt = jsonwebtoken.sign(
-            {
-              payload: {
           id: 3,
           name: "editor",
           permissions: {},

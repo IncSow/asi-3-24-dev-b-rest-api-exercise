@@ -36,7 +36,7 @@ const userRoutes = ({ app, db }) => {
     const { userId } = req.params
     const loggedUser = await currentUser(req)
 
-    if (loggedUser?.id != userId || !isUserAdmin(loggedUser)) {
+    if (loggedUser?.id != userId && !isUserAdmin(loggedUser)) {
       invalidPermissions(res)
 
       return
@@ -105,7 +105,7 @@ const userRoutes = ({ app, db }) => {
 
     const loggedUser = await currentUser(req)
 
-    if (loggedUser?.id != userId || !isUserAdmin(loggedUser)) {
+    if (loggedUser?.id != userId && !isUserAdmin(loggedUser)) {
       invalidPermissions(res)
 
       return
@@ -113,9 +113,7 @@ const userRoutes = ({ app, db }) => {
 
     const passwordHash = password ? bcrypt.hashSync(password, salt) : null
 
-    const [user] = await db("users").where({
-      id: userId,
-    })
+    const user = await UserModel.query().findById({ userId })
 
     if (!user) {
       notFound(res)
@@ -143,7 +141,7 @@ const userRoutes = ({ app, db }) => {
 
     const loggedUser = await currentUser(req)
 
-    if (loggedUser?.id != userId || !isUserAdmin(loggedUser)) {
+    if (loggedUser?.id != userId && !isUserAdmin(loggedUser)) {
       invalidPermissions(res)
 
       return

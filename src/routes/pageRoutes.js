@@ -1,5 +1,5 @@
 import PageModel from "../db/models/PageModel.js"
-import auth from "../middleware/auth.js"
+import { auth } from "../middleware/auth.js"
 import { notFound } from "../response.js"
 
 const pageRoutes = ({ app }) => {

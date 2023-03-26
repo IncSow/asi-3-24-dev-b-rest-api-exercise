@@ -1,6 +1,6 @@
 import hashPassword from "../src/db/methods/hashPassword.js"
 
-const [passwordHash, passwordSalt] = await hashPassword("password")
+const [passwordHash, passwordSalt] = await hashPassword("Passw0rd$")
 
 export const seed = async (knex) => {
   // Deletes ALL existing entries
@@ -29,7 +29,7 @@ export const seed = async (knex) => {
         {
           first_name: "Lïlo",
           last_name: "Jacques",
-          email: "nigel@email.com",
+          email: "lilo@gmail.com",
           password_hash: passwordHash,
           password_salt: passwordSalt,
           role_id: 1,

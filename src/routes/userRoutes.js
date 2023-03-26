@@ -1,6 +1,6 @@
 import validate from "../middleware/validate.js"
 import UserModel from "../db/models/UserModel.js"
-import auth from "../middleware/auth.js"
+import { auth, isUserAdmin } from "../middleware/auth.js"
 import bcrypt from "bcryptjs"
 import {
   nameValidator,
@@ -8,17 +8,26 @@ import {
   passwordValidator,
 } from "../validators.js"
 import hashPassword from "../db/methods/hashPassword.js"
-import { notFound } from "../response.js"
+import { invalidPermissions, notFound } from "../response.js"
+import { currentUser } from "../middleware/getCurrentUser.js"
 
 const userRoutes = ({ app, db }) => {
-  app.get("/users", auth, async (req, res) => {
-    const record = UserModel.query().select()
+  app.get("/users", async (req, res) => {
+    const record = await UserModel.query()
 
     res.send({ result: record })
   })
 
   app.get("/users/:userId", auth, async (req, res) => {
     const { userId } = req.params
+    const loggedUser = await currentUser(req)
+
+    if (loggedUser.id != userId || !isUserAdmin(loggedUser)) {
+      invalidPermissions(res)
+
+      return
+    }
+
     const user = await UserModel.query().findById(userId)
 
     if (!user) {
@@ -43,6 +52,14 @@ const userRoutes = ({ app, db }) => {
     auth,
     async (req, res) => {
       const { email, password, first_name, last_name } = req.body
+      const loggedUser = currentUser(req)
+
+      if (!isUserAdmin(loggedUser)) {
+        invalidPermissions(res)
+
+        return
+      }
+
       const user = await UserModel.query().findOne({ email })
 
       if (user) {
@@ -59,7 +76,6 @@ const userRoutes = ({ app, db }) => {
         email: email,
         password_hash: passwordHash,
         password_salt: passwordSalt,
-        role_id: 1,
       })
 
       res.send({ result: new_user })
@@ -72,6 +88,14 @@ const userRoutes = ({ app, db }) => {
       body: { first_name, last_name, email, password },
     } = req
     const salt = 10
+
+    const loggedUser = currentUser(req)
+
+    if (loggedUser.id != userId || !isUserAdmin(loggedUser)) {
+      invalidPermissions(res)
+
+      return
+    }
 
     const passwordHash = password ? bcrypt.hashSync(password, salt) : null
 
@@ -102,6 +126,15 @@ const userRoutes = ({ app, db }) => {
 
   app.delete("/users/:userId", auth, async (req, res) => {
     const { userId } = req.params
+
+    const loggedUser = currentUser(req)
+
+    if (loggedUser.id != userId || !isUserAdmin(loggedUser)) {
+      invalidPermissions(res)
+
+      return
+    }
+
     const [user] = await db("users").where({ id: userId })
 
     if (!user) {

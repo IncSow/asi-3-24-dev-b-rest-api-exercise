@@ -1,21 +1,22 @@
 import PageModel from "../db/models/PageModel.js"
+import auth from "../middleware/auth.js"
 import { notFound } from "../response.js"
 
-const pageRoutes = ({ app, db }) => {
-  app.get("/pages", async (req, res) => {
+const pageRoutes = ({ app }) => {
+  app.get("/pages", auth, async (req, res) => {
     const record = await PageModel.query()
       .where({ "pages.status": true })
       .select()
     res.send({ result: record })
   })
 
-  app.get("/pages/:url_slug", async (req, res) => {
+  app.get("/pages/:url_slug", auth, async (req, res) => {
     const { url_slug } = req.params
 
     const page = await PageModel.query().findById(url_slug)
 
     if (!page) {
-      res.status(404).send({ error: "Not Found" })
+      notFound(res)
 
       return
     }
@@ -23,7 +24,7 @@ const pageRoutes = ({ app, db }) => {
     res.send({ page })
   })
 
-  app.post("/pages", async (req, res) => {
+  app.post("/pages", auth, async (req, res) => {
     const { title, content } = req.body
     const url_slug = title.replace(/ /g, "-")
 
@@ -38,7 +39,7 @@ const pageRoutes = ({ app, db }) => {
     res.send({ result: new_page })
   })
 
-  app.patch("/pages/:url_slug", async (req, res) => {
+  app.patch("/pages/:url_slug", auth, async (req, res) => {
     const {
       params: { url_slug },
       body: { title, content, status },
@@ -73,7 +74,7 @@ const pageRoutes = ({ app, db }) => {
     res.send({ result: page })
   })
 
-  app.delete("/pages/:url_slug", async (req, res) => {
+  app.delete("/pages/:url_slug", auth, async (req, res) => {
     const { url_slug } = req.params
     const page = await PageModel.query().findOne({ url_slug: url_slug })
 

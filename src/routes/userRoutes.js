@@ -7,20 +7,22 @@ import {
   emailValidator,
   passwordValidator,
 } from "../validators.js"
+import hashPassword from "../db/methods/hashPassword.js"
+import { notFound } from "../response.js"
 
 const userRoutes = ({ app, db }) => {
-  app.get("/users", async (req, res) => {
+  app.get("/users", auth, async (req, res) => {
     const record = UserModel.query().select()
 
     res.send({ result: record })
   })
 
-  app.get("/users/:userId", async (req, res) => {
+  app.get("/users/:userId", auth, async (req, res) => {
     const { userId } = req.params
     const user = await UserModel.query().findById(userId)
 
     if (!user) {
-      res.status(404).send({ error: "Not Found" })
+      notFound(res)
 
       return
     }
@@ -38,6 +40,7 @@ const userRoutes = ({ app, db }) => {
         password: passwordValidator.required(),
       },
     }),
+    auth,
     async (req, res) => {
       const { email, password, first_name, last_name } = req.body
       const user = await UserModel.query().findOne({ email })
@@ -63,7 +66,7 @@ const userRoutes = ({ app, db }) => {
     }
   )
 
-  app.patch("/users/:userId", async (req, res) => {
+  app.patch("/users/:userId", auth, async (req, res) => {
     const {
       params: { userId },
       body: { first_name, last_name, email, password },
@@ -77,7 +80,7 @@ const userRoutes = ({ app, db }) => {
     })
 
     if (!user) {
-      res.status(404).send({ error: "Not Found" })
+      notFound(res)
 
       return
     }
@@ -97,12 +100,12 @@ const userRoutes = ({ app, db }) => {
     })
   })
 
-  app.delete("/users/:userId", async (req, res) => {
+  app.delete("/users/:userId", auth, async (req, res) => {
     const { userId } = req.params
     const [user] = await db("users").where({ id: userId })
 
     if (!user) {
-      res.status(404).send({ error: "Not Found" })
+      notFound(res)
 
       return
     }

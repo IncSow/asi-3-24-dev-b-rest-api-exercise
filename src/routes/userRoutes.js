@@ -10,19 +10,23 @@ import {
 import hashPassword from "../db/methods/hashPassword.js"
 import { invalidPermissions, notFound } from "../response.js"
 import { currentUser } from "../middleware/getCurrentUser.js"
+import getCount from "../middleware/getCount.js"
 
 const userRoutes = ({ app, db }) => {
-  app.get("/users", async (req, res) => {
-    const record = await UserModel.query()
+  app.get("/users", auth, async (req, res) => {
+    const { limit, page } = req.query
+    const query = UserModel.query()
+    const record = await query.modify("paginate", limit, page)
+    const count = await getCount(query)
 
-    res.send({ result: record })
+    res.send({ meta: count, result: record })
   })
 
   app.get("/users/:userId", auth, async (req, res) => {
     const { userId } = req.params
     const loggedUser = await currentUser(req)
 
-    if (loggedUser.id != userId || !isUserAdmin(loggedUser)) {
+    if (loggedUser?.id != userId || !isUserAdmin(loggedUser)) {
       invalidPermissions(res)
 
       return
@@ -52,7 +56,7 @@ const userRoutes = ({ app, db }) => {
     auth,
     async (req, res) => {
       const { email, password, first_name, last_name } = req.body
-      const loggedUser = currentUser(req)
+      const loggedUser = await currentUser(req)
 
       if (!isUserAdmin(loggedUser)) {
         invalidPermissions(res)
@@ -89,9 +93,9 @@ const userRoutes = ({ app, db }) => {
     } = req
     const salt = 10
 
-    const loggedUser = currentUser(req)
+    const loggedUser = await currentUser(req)
 
-    if (loggedUser.id != userId || !isUserAdmin(loggedUser)) {
+    if (loggedUser?.id != userId || !isUserAdmin(loggedUser)) {
       invalidPermissions(res)
 
       return
@@ -127,9 +131,9 @@ const userRoutes = ({ app, db }) => {
   app.delete("/users/:userId", auth, async (req, res) => {
     const { userId } = req.params
 
-    const loggedUser = currentUser(req)
+    const loggedUser = await currentUser(req)
 
-    if (loggedUser.id != userId || !isUserAdmin(loggedUser)) {
+    if (loggedUser?.id != userId || !isUserAdmin(loggedUser)) {
       invalidPermissions(res)
 
       return

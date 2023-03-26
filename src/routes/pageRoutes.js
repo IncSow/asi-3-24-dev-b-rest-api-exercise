@@ -1,19 +1,39 @@
 import PageModel from "../db/models/PageModel.js"
-import { auth } from "../middleware/auth.js"
-import { notFound } from "../response.js"
+import {
+  auth,
+  isUserAdmin,
+  isUserManager,
+  softAuth,
+} from "../middleware/auth.js"
+import getCount from "../middleware/getCount.js"
+import { currentUser } from "../middleware/getCurrentUser.js"
+import validate from "../middleware/validate.js"
+import { invalidPermissions, notFound } from "../response.js"
+import { stringValidator } from "../validators.js"
 
 const pageRoutes = ({ app }) => {
-  app.get("/pages", auth, async (req, res) => {
-    const record = await PageModel.query()
-      .where({ "pages.status": true })
-      .select()
-    res.send({ result: record })
+  app.get("/pages", softAuth, async (req, res) => {
+    const { limit, page } = req.query
+    const loggedUser = await currentUser(req)
+
+    let query
+
+    if (loggedUser) {
+      query = PageModel.query()
+    } else {
+      query = PageModel.query().where({ status: true })
+    }
+
+    const record = await query.modify("paginate", limit, page)
+    const count = await getCount(query)
+
+    res.send({ meta: count, result: record })
   })
 
   app.get("/pages/:url_slug", auth, async (req, res) => {
     const { url_slug } = req.params
 
-    const page = await PageModel.query().findById(url_slug)
+    const page = await PageModel.query().findOne({ url_slug })
 
     if (!page) {
       notFound(res)
@@ -24,26 +44,55 @@ const pageRoutes = ({ app }) => {
     res.send({ page })
   })
 
-  app.post("/pages", auth, async (req, res) => {
-    const { title, content } = req.body
-    const url_slug = title.replace(/ /g, "-")
+  app.post(
+    "/pages",
+    validate({
+      body: {
+        title: stringValidator.required(),
+        content: stringValidator.required(),
+      },
+    }),
+    auth,
+    async (req, res) => {
+      const { title, content } = req.body
+      const loggedUser = await currentUser(req)
 
-    const new_page = await PageModel.query().insertAndFetch({
-      title: title,
-      content: content,
-      url_slug: url_slug,
-      user_id: 2,
-      status: true,
-    })
+      if (!isUserAdmin(loggedUser) && !isUserManager(loggedUser)) {
+        invalidPermissions(res)
 
-    res.send({ result: new_page })
-  })
+        return
+      }
+
+      const url_slug = title.replace(/[\W_ ]/g, "-")
+
+      const page = await PageModel.query().findOne({ url_slug })
+
+      if (page) {
+        res
+          .status(409)
+          .send({ error: "A page with that url or title already exists" })
+
+        return
+      }
+
+      const new_page = await PageModel.query().insertAndFetch({
+        title: title,
+        content: content,
+        url_slug: url_slug,
+        user_id: loggedUser.id,
+        status: true,
+      })
+
+      res.send({ result: new_page })
+    }
+  )
 
   app.patch("/pages/:url_slug", auth, async (req, res) => {
     const {
       params: { url_slug },
       body: { title, content, status },
     } = req
+    const loggedUser = await currentUser(req)
     const page = await PageModel.query().findOne({ url_slug: url_slug })
 
     if (!page) {
@@ -52,13 +101,16 @@ const pageRoutes = ({ app }) => {
       return
     }
 
-    let edited_by = null
+    let edited_by
 
     if (page.edited_by === null) {
-      edited_by = { editors: [{ user_id: 2, edited_at: Date() }] }
+      edited_by = { editors: [{ user_id: loggedUser.id, edited_at: Date() }] }
     } else {
       edited_by = {
-        editors: [...page.edited_by.editors, { user_id: 2, edited_at: Date() }],
+        editors: [
+          ...page.edited_by.editors,
+          { user_id: loggedUser.id, edited_at: Date() },
+        ],
       }
     }
 
@@ -76,6 +128,14 @@ const pageRoutes = ({ app }) => {
 
   app.delete("/pages/:url_slug", auth, async (req, res) => {
     const { url_slug } = req.params
+    const loggedUser = await currentUser(req)
+
+    if (!isUserAdmin(loggedUser) && !isUserManager(loggedUser)) {
+      invalidPermissions(res)
+
+      return
+    }
+
     const page = await PageModel.query().findOne({ url_slug: url_slug })
 
     if (!page) {
